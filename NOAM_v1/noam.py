@@ -15,6 +15,8 @@ from torch.distributions.categorical import Categorical
 
 from pettingzoo.butterfly import pistonball_v6
 
+from pettingzoo.mpe import simple_spread_v2 
+
 class Agent(nn.Module):
     def __init__(self, num_actions):
         super().__init__()
@@ -58,7 +60,7 @@ def batchify_obs(obs, device):
     # convert to list of np arrays
     obs = np.stack([obs[a] for a in obs], axis=0)
     # transpose to be (batch, channel, height, width)
-    obs = obs.transpose(0, -1, 1, 2)
+    # obs = obs.transpose(0, -1, 1, 2)
     # convert to torch
     obs = torch.tensor(obs).to(device)
 
@@ -95,15 +97,17 @@ if __name__ == "__main__":
     stack_size = 4
     frame_size = (64, 64)
     max_cycles = 125
-    total_episodes = 2e5
+    total_episodes = 2
 
     """ ENV SETUP """
-    env = pistonball_v6.parallel_env(
-        render_mode="rgb_array", continuous=False, max_cycles=max_cycles
-    )
-    env = color_reduction_v0(env)
-    env = resize_v1(env, frame_size[0], frame_size[1])
-    env = frame_stack_v1(env, stack_size=stack_size)
+    # env = pistonball_v6.parallel_env(
+    #     render_mode="rgb_array", continuous=False, max_cycles=max_cycles
+    # )
+    env = simple_spread_v2.parallel_env(N=2, max_cycles=25, continuous_actions=False)
+    x = env.reset() 
+    # env = color_reduction_v0(env)
+    # env = resize_v1(env, frame_size[0], frame_size[1])
+    # env = frame_stack_v1(env, stack_size=stack_size)
     num_agents = len(env.possible_agents)
     num_actions = env.action_space(env.possible_agents[0]).n
     observation_size = env.observation_space(env.possible_agents[0]).shape

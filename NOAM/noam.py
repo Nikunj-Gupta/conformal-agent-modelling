@@ -1,280 +1,260 @@
-"""Basic code which shows what it's like to run PPO on the Pistonball env using the parallel API, this code is inspired by CleanRL.
+"""This is a full example of using Tianshou with MARL to train agents, complete with argument parsing (CLI) and logging.
 
-This code is exceedingly basic, with no logging or weights saving.
-The intention was for users to have a (relatively clean) ~200 line file to refer to when they want to design their own learning algorithm.
+Author: Will (https://github.com/WillDudley)
 
-Author: Jet (https://github.com/jjshoots)
+Python version used: 3.8.10
+
+Requirements:
+pettingzoo == 1.22.0
+git+https://github.com/thu-ml/tianshou
 """
 
+import argparse
+import os
+from copy import deepcopy
+from typing import Optional, Tuple
+
+import gym
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from supersuit import color_reduction_v0, frame_stack_v1, resize_v1
-from torch.distributions.categorical import Categorical
+from tianshou.data import Collector, VectorReplayBuffer
+from tianshou.env import DummyVectorEnv
+from tianshou.env.pettingzoo_env import PettingZooEnv
+from tianshou.policy import BasePolicy, DQNPolicy, MultiAgentPolicyManager, RandomPolicy
+from tianshou.trainer import offpolicy_trainer
+from tianshou.utils import TensorboardLogger
+from tianshou.utils.net.common import Net
+from torch.utils.tensorboard import SummaryWriter
 
-from pettingzoo.butterfly import pistonball_v6
+from pettingzoo.classic import tictactoe_v3
 
-class Agent(nn.Module):
-    def __init__(self, num_actions):
-        super().__init__()
 
-        self.network = nn.Sequential(
-            self._layer_init(nn.Conv2d(4, 32, 3, padding=1)),
-            nn.MaxPool2d(2),
-            nn.ReLU(),
-            self._layer_init(nn.Conv2d(32, 64, 3, padding=1)),
-            nn.MaxPool2d(2),
-            nn.ReLU(),
-            self._layer_init(nn.Conv2d(64, 128, 3, padding=1)),
-            nn.MaxPool2d(2),
-            nn.ReLU(),
-            nn.Flatten(),
-            self._layer_init(nn.Linear(128 * 8 * 8, 512)),
-            nn.ReLU(),
+def get_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int, default=1626)
+    parser.add_argument("--eps-test", type=float, default=0.05)
+    parser.add_argument("--eps-train", type=float, default=0.1)
+    parser.add_argument("--buffer-size", type=int, default=20000)
+    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument(
+        "--gamma", type=float, default=0.9, help="a smaller gamma favors earlier win"
+    )
+    parser.add_argument("--n-step", type=int, default=3)
+    parser.add_argument("--target-update-freq", type=int, default=320)
+    parser.add_argument("--epoch", type=int, default=50)
+    parser.add_argument("--step-per-epoch", type=int, default=1000)
+    parser.add_argument("--step-per-collect", type=int, default=10)
+    parser.add_argument("--update-per-step", type=float, default=0.1)
+    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument(
+        "--hidden-sizes", type=int, nargs="*", default=[128, 128, 128, 128]
+    )
+    parser.add_argument("--training-num", type=int, default=10)
+    parser.add_argument("--test-num", type=int, default=10)
+    parser.add_argument("--logdir", type=str, default="log")
+    parser.add_argument("--render", type=float, default=0.1)
+    parser.add_argument(
+        "--win-rate",
+        type=float,
+        default=0.6,
+        help="the expected winning rate: Optimal policy can get 0.7",
+    )
+    parser.add_argument(
+        "--watch",
+        default=False,
+        action="store_true",
+        help="no training, " "watch the play of pre-trained models",
+    )
+    parser.add_argument(
+        "--agent-id",
+        type=int,
+        default=2,
+        help="the learned agent plays as the"
+        " agent_id-th player. Choices are 1 and 2.",
+    )
+    parser.add_argument(
+        "--resume-path",
+        type=str,
+        default="",
+        help="the path of agent pth file " "for resuming from a pre-trained agent",
+    )
+    parser.add_argument(
+        "--opponent-path",
+        type=str,
+        default="",
+        help="the path of opponent agent pth file "
+        "for resuming from a pre-trained agent",
+    )
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
+    return parser
+
+
+def get_args() -> argparse.Namespace:
+    parser = get_parser()
+    return parser.parse_known_args()[0]
+
+
+def get_agents(
+    args: argparse.Namespace = get_args(),
+    agent_learn: Optional[BasePolicy] = None,
+    agent_opponent: Optional[BasePolicy] = None,
+    optim: Optional[torch.optim.Optimizer] = None,
+) -> Tuple[BasePolicy, torch.optim.Optimizer, list]:
+    env = get_env()
+    observation_space = (
+        env.observation_space["observation"]
+        if isinstance(env.observation_space, gym.spaces.Dict)
+        else env.observation_space
+    )
+    args.state_shape = (
+        observation_space["observation"].shape or observation_space["observation"].n
+    )
+    args.action_shape = env.action_space.shape or env.action_space.n
+    if agent_learn is None:
+        # model
+        net = Net(
+            args.state_shape,
+            args.action_shape,
+            hidden_sizes=args.hidden_sizes,
+            device=args.device,
+        ).to(args.device)
+        if optim is None:
+            optim = torch.optim.Adam(net.parameters(), lr=args.lr)
+        agent_learn = DQNPolicy(
+            net,
+            optim,
+            args.gamma,
+            args.n_step,
+            target_update_freq=args.target_update_freq,
         )
-        self.actor = self._layer_init(nn.Linear(512, num_actions), std=0.01)
-        self.critic = self._layer_init(nn.Linear(512, 1))
+        if args.resume_path:
+            agent_learn.load_state_dict(torch.load(args.resume_path))
 
-    def _layer_init(self, layer, std=np.sqrt(2), bias_const=0.0):
-        torch.nn.init.orthogonal_(layer.weight, std)
-        torch.nn.init.constant_(layer.bias, bias_const)
-        return layer
+    if agent_opponent is None:
+        if args.opponent_path:
+            agent_opponent = deepcopy(agent_learn)
+            agent_opponent.load_state_dict(torch.load(args.opponent_path))
+        else:
+            agent_opponent = RandomPolicy()
 
-    def get_value(self, x):
-        return self.critic(self.network(x / 255.0))
-
-    def get_action_and_value(self, x, action=None):
-        hidden = self.network(x / 255.0)
-        logits = self.actor(hidden)
-        probs = Categorical(logits=logits)
-        if action is None:
-            action = probs.sample()
-        return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
+    if args.agent_id == 1:
+        agents = [agent_learn, agent_opponent]
+    else:
+        agents = [agent_opponent, agent_learn]
+    policy = MultiAgentPolicyManager(agents, env)
+    return policy, optim, env.agents
 
 
-def batchify_obs(obs, device):
-    """Converts PZ style observations to batch of torch arrays."""
-    # convert to list of np arrays
-    obs = np.stack([obs[a] for a in obs], axis=0)
-    # transpose to be (batch, channel, height, width)
-    obs = obs.transpose(0, -1, 1, 2)
-    # convert to torch
-    obs = torch.tensor(obs).to(device)
-
-    return obs
+def get_env(render_mode=None):
+    return PettingZooEnv(tictactoe_v3.env(render_mode=render_mode))
 
 
-def batchify(x, device):
-    """Converts PZ style returns to batch of torch arrays."""
-    # convert to list of np arrays
-    x = np.stack([x[a] for a in x], axis=0)
-    # convert to torch
-    x = torch.tensor(x).to(device)
+def train_agent(
+    args: argparse.Namespace = get_args(),
+    agent_learn: Optional[BasePolicy] = None,
+    agent_opponent: Optional[BasePolicy] = None,
+    optim: Optional[torch.optim.Optimizer] = None,
+) -> Tuple[dict, BasePolicy]:
+    # ======== environment setup =========
+    train_envs = DummyVectorEnv([get_env for _ in range(args.training_num)])
+    test_envs = DummyVectorEnv([get_env for _ in range(args.test_num)])
+    # seed
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    train_envs.seed(args.seed)
+    test_envs.seed(args.seed)
 
-    return x
+    # ======== agent setup =========
+    policy, optim, agents = get_agents(
+        args, agent_learn=agent_learn, agent_opponent=agent_opponent, optim=optim
+    )
+
+    # ======== collector setup =========
+    train_collector = Collector(
+        policy,
+        train_envs,
+        VectorReplayBuffer(args.buffer_size, len(train_envs)),
+        exploration_noise=True,
+    )
+    test_collector = Collector(policy, test_envs, exploration_noise=True)
+    # policy.set_eps(1)
+    train_collector.collect(n_step=args.batch_size * args.training_num)
+
+    # ======== tensorboard logging setup =========
+    log_path = os.path.join(args.logdir, "tic_tac_toe", "dqn")
+    writer = SummaryWriter(log_path)
+    writer.add_text("args", str(args))
+    logger = TensorboardLogger(writer)
+
+    # ======== callback functions used during training =========
+    def save_best_fn(policy):
+        if hasattr(args, "model_save_path"):
+            model_save_path = args.model_save_path
+        else:
+            model_save_path = os.path.join(
+                args.logdir, "tic_tac_toe", "dqn", "policy.pth"
+            )
+        torch.save(
+            policy.policies[agents[args.agent_id - 1]].state_dict(), model_save_path
+        )
+
+    def stop_fn(mean_rewards):
+        return mean_rewards >= args.win_rate
+
+    def train_fn(epoch, env_step):
+        policy.policies[agents[args.agent_id - 1]].set_eps(args.eps_train)
+
+    def test_fn(epoch, env_step):
+        policy.policies[agents[args.agent_id - 1]].set_eps(args.eps_test)
+
+    def reward_metric(rews):
+        return rews[:, args.agent_id - 1]
+
+    # trainer
+    result = offpolicy_trainer(
+        policy,
+        train_collector,
+        test_collector,
+        args.epoch,
+        args.step_per_epoch,
+        args.step_per_collect,
+        args.test_num,
+        args.batch_size,
+        train_fn=train_fn,
+        test_fn=test_fn,
+        stop_fn=stop_fn,
+        save_best_fn=save_best_fn,
+        update_per_step=args.update_per_step,
+        logger=logger,
+        test_in_train=False,
+        reward_metric=reward_metric,
+    )
+
+    return result, policy.policies[agents[args.agent_id - 1]]
 
 
-def unbatchify(x, env):
-    """Converts np array to PZ style arguments."""
-    x = x.cpu().numpy()
-    x = {a: x[i] for i, a in enumerate(env.possible_agents)}
-
-    return x
+# ======== a test function that tests a pre-trained agent ======
+def watch(
+    args: argparse.Namespace = get_args(),
+    agent_learn: Optional[BasePolicy] = None,
+    agent_opponent: Optional[BasePolicy] = None,
+) -> None:
+    env = DummyVectorEnv([lambda: get_env(render_mode="human")])
+    policy, optim, agents = get_agents(
+        args, agent_learn=agent_learn, agent_opponent=agent_opponent
+    )
+    policy.eval()
+    policy.policies[agents[args.agent_id - 1]].set_eps(args.eps_test)
+    collector = Collector(policy, env, exploration_noise=True)
+    result = collector.collect(n_episode=1, render=args.render)
+    rews, lens = result["rews"], result["lens"]
+    print(f"Final reward: {rews[:, args.agent_id - 1].mean()}, length: {lens.mean()}")
 
 
 if __name__ == "__main__":
-
-    """ALGO PARAMS"""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    ent_coef = 0.1
-    vf_coef = 0.1
-    clip_coef = 0.1
-    gamma = 0.99
-    batch_size = 32
-    stack_size = 4
-    frame_size = (64, 64)
-    max_cycles = 125
-    total_episodes = 2
-
-    """ ENV SETUP """
-    env = pistonball_v6.parallel_env(
-        render_mode="rgb_array", continuous=False, max_cycles=max_cycles
-    )
-    env = color_reduction_v0(env)
-    env = resize_v1(env, frame_size[0], frame_size[1])
-    env = frame_stack_v1(env, stack_size=stack_size)
-    num_agents = 2 #len(env.possible_agents)
-    num_actions = env.action_space(env.possible_agents[0]).n
-    observation_size = env.observation_space(env.possible_agents[0]).shape
-
-    """ LEARNER SETUP """
-    agent = Agent(num_actions=num_actions).to(device)
-    optimizer = optim.Adam(agent.parameters(), lr=0.001, eps=1e-5)
-
-    """ ALGO LOGIC: EPISODE STORAGE"""
-    end_step = 0
-    total_episodic_return = 0
-    rb_obs = torch.zeros((max_cycles, num_agents, stack_size, *frame_size)).to(device)
-    rb_actions = torch.zeros((max_cycles, num_agents)).to(device)
-    rb_logprobs = torch.zeros((max_cycles, num_agents)).to(device)
-    rb_rewards = torch.zeros((max_cycles, num_agents)).to(device)
-    rb_terms = torch.zeros((max_cycles, num_agents)).to(device)
-    rb_values = torch.zeros((max_cycles, num_agents)).to(device)
-
-    """ TRAINING LOGIC """
-    # train for n number of episodes
-    for episode in range(total_episodes):
-
-        # collect an episode
-        with torch.no_grad():
-
-            # collect observations and convert to batch of torch tensors
-            next_obs = env.reset(seed=None)
-            # reset the episodic return
-            total_episodic_return = 0
-
-            # each episode has num_steps
-            for step in range(0, max_cycles):
-
-                # rollover the observation
-                obs = batchify_obs(next_obs, device)
-
-                # get action from the agent
-                actions, logprobs, _, values = agent.get_action_and_value(obs)
-
-                # execute the environment and log data
-                next_obs, rewards, terms, truncs, infos = env.step(
-                    unbatchify(actions, env)
-                )
-
-                # add to episode storage
-                rb_obs[step] = obs
-                rb_rewards[step] = batchify(rewards, device)
-                rb_terms[step] = batchify(terms, device)
-                rb_actions[step] = actions
-                rb_logprobs[step] = logprobs
-                rb_values[step] = values.flatten()
-
-                # compute episodic return
-                total_episodic_return += rb_rewards[step].cpu().numpy()
-
-                # if we reach termination or truncation, end
-                if any([terms[a] for a in terms]) or any([truncs[a] for a in truncs]):
-                    end_step = step
-                    break
-
-        # bootstrap value if not done
-        with torch.no_grad():
-            rb_advantages = torch.zeros_like(rb_rewards).to(device)
-            for t in reversed(range(end_step)):
-                delta = (
-                    rb_rewards[t]
-                    + gamma * rb_values[t + 1] * rb_terms[t + 1]
-                    - rb_values[t]
-                )
-                rb_advantages[t] = delta + gamma * gamma * rb_advantages[t + 1]
-            rb_returns = rb_advantages + rb_values
-
-        # convert our episodes to batch of individual transitions
-        b_obs = torch.flatten(rb_obs[:end_step], start_dim=0, end_dim=1)
-        b_logprobs = torch.flatten(rb_logprobs[:end_step], start_dim=0, end_dim=1)
-        b_actions = torch.flatten(rb_actions[:end_step], start_dim=0, end_dim=1)
-        b_returns = torch.flatten(rb_returns[:end_step], start_dim=0, end_dim=1)
-        b_values = torch.flatten(rb_values[:end_step], start_dim=0, end_dim=1)
-        b_advantages = torch.flatten(rb_advantages[:end_step], start_dim=0, end_dim=1)
-
-        # Optimizing the policy and value network
-        b_index = np.arange(len(b_obs))
-        clip_fracs = []
-        for repeat in range(3):
-            # shuffle the indices we use to access the data
-            np.random.shuffle(b_index)
-            for start in range(0, len(b_obs), batch_size):
-                # select the indices we want to train on
-                end = start + batch_size
-                batch_index = b_index[start:end]
-
-                _, newlogprob, entropy, value = agent.get_action_and_value(
-                    b_obs[batch_index], b_actions.long()[batch_index]
-                )
-                logratio = newlogprob - b_logprobs[batch_index]
-                ratio = logratio.exp()
-
-                with torch.no_grad():
-                    # calculate approx_kl http://joschu.net/blog/kl-approx.html
-                    old_approx_kl = (-logratio).mean()
-                    approx_kl = ((ratio - 1) - logratio).mean()
-                    clip_fracs += [
-                        ((ratio - 1.0).abs() > clip_coef).float().mean().item()
-                    ]
-
-                # normalize advantaegs
-                advantages = b_advantages[batch_index]
-                advantages = (advantages - advantages.mean()) / (
-                    advantages.std() + 1e-8
-                )
-
-                # Policy loss
-                pg_loss1 = -b_advantages[batch_index] * ratio
-                pg_loss2 = -b_advantages[batch_index] * torch.clamp(
-                    ratio, 1 - clip_coef, 1 + clip_coef
-                )
-                pg_loss = torch.max(pg_loss1, pg_loss2).mean()
-
-                # Value loss
-                value = value.flatten()
-                v_loss_unclipped = (value - b_returns[batch_index]) ** 2
-                v_clipped = b_values[batch_index] + torch.clamp(
-                    value - b_values[batch_index],
-                    -clip_coef,
-                    clip_coef,
-                )
-                v_loss_clipped = (v_clipped - b_returns[batch_index]) ** 2
-                v_loss_max = torch.max(v_loss_unclipped, v_loss_clipped)
-                v_loss = 0.5 * v_loss_max.mean()
-
-                entropy_loss = entropy.mean()
-                loss = pg_loss - ent_coef * entropy_loss + v_loss * vf_coef
-
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-
-        y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
-        var_y = np.var(y_true)
-        explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
-
-        torch.save(agent.state_dict(), "./logs/") 
-        print(f"Training episode {episode}")
-        print(f"Episodic Return: {np.mean(total_episodic_return)}")
-        print(f"Episode Length: {end_step}")
-        print("")
-        print(f"Value Loss: {v_loss.item()}")
-        print(f"Policy Loss: {pg_loss.item()}")
-        print(f"Old Approx KL: {old_approx_kl.item()}")
-        print(f"Approx KL: {approx_kl.item()}")
-        print(f"Clip Fraction: {np.mean(clip_fracs)}")
-        print(f"Explained Variance: {explained_var.item()}")
-        print("\n-------------------------------------------\n")
-
-    """ RENDER THE POLICY """
-    env = pistonball_v6.parallel_env(render_mode="human", continuous=False)
-    env = color_reduction_v0(env)
-    env = resize_v1(env, 64, 64)
-    env = frame_stack_v1(env, stack_size=4)
-
-    agent.eval()
-
-    with torch.no_grad():
-        # render 5 episodes out
-        for episode in range(5):
-            obs = batchify_obs(env.reset(seed=None), device)
-            terms = [False]
-            truncs = [False]
-            while not any(terms) and not any(truncs):
-                actions, logprobs, _, values = agent.get_action_and_value(obs)
-                obs, rewards, terms, truncs, infos = env.step(unbatchify(actions, env))
-                obs = batchify_obs(obs, device)
-                terms = [terms[a] for a in terms]
-                truncs = [truncs[a] for a in truncs]
+    # train the agent and watch its performance in a match!
+    args = get_args()
+    result, agent = train_agent(args)
+    watch(args, agent)

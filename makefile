@@ -1,11 +1,13 @@
 all: 
 	clear 
-	pip install -r req.txt 
+	# pip install -r req.txt 
+	python noam/noam.py 
 
 setup: 
 	module load python/3.8 
 	source venv/bin/activate 
+	# pip install -r req.txt 
 
-noam: 
+noam-run: 
 	clear 
-	python NOAM/noam.py 
+	python noam/noam.py 
