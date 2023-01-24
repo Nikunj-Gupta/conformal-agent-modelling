@@ -27,6 +27,7 @@ from tianshou.utils.net.common import Net
 from torch.utils.tensorboard import SummaryWriter
 
 from pettingzoo.classic import tictactoe_v3
+from pettingzoo.mpe import simple_spread_v2 
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -109,7 +110,8 @@ def get_agents(
         else env.observation_space
     )
     args.state_shape = (
-        observation_space["observation"].shape or observation_space["observation"].n
+        # observation_space["observation"].shape or observation_space["observation"].n
+        observation_space.shape or observation_space.n
     )
     args.action_shape = env.action_space.shape or env.action_space.n
     if agent_learn is None:
@@ -148,7 +150,8 @@ def get_agents(
 
 
 def get_env(render_mode=None):
-    return PettingZooEnv(tictactoe_v3.env(render_mode=render_mode))
+    return PettingZooEnv(simple_spread_v2.env(N=2, render_mode=render_mode))
+    # return PettingZooEnv(tictactoe_v3.env(render_mode=render_mode))
 
 
 def train_agent(
