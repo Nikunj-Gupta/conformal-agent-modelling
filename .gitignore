@@ -1,3 +1,5 @@
 venv/
-log/*
+log*
 *.pth
+__pycache__
+autorom/

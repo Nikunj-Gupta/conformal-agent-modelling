@@ -33,6 +33,8 @@ from pettingzoo.mpe import simple_spread_v2
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=1626)
+    parser.add_argument("--n_agents", type=int, default=3)
+    parser.add_argument("--continuous_actions", type=bool, default=False)
     parser.add_argument("--eps-test", type=float, default=0.05)
     parser.add_argument("--eps-train", type=float, default=0.1)
     parser.add_argument("--buffer-size", type=int, default=20000)
@@ -42,8 +44,8 @@ def get_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--n-step", type=int, default=3)
     parser.add_argument("--target-update-freq", type=int, default=320)
-    parser.add_argument("--epoch", type=int, default=50)
-    parser.add_argument("--step-per-epoch", type=int, default=1000)
+    parser.add_argument("--epoch", type=int, default=30_000)
+    parser.add_argument("--step-per-epoch", type=int, default=25)
     parser.add_argument("--step-per-collect", type=int, default=10)
     parser.add_argument("--update-per-step", type=float, default=0.1)
     parser.add_argument("--batch-size", type=int, default=64)
@@ -52,7 +54,7 @@ def get_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--training-num", type=int, default=10)
     parser.add_argument("--test-num", type=int, default=10)
-    parser.add_argument("--logdir", type=str, default="log")
+    parser.add_argument("--logdir", type=str, default="noam/log")
     parser.add_argument("--render", type=float, default=0.1)
     parser.add_argument(
         "--win-rate",
@@ -74,10 +76,10 @@ def get_parser() -> argparse.ArgumentParser:
         " agent_id-th player. Choices are 1 and 2.",
     )
     parser.add_argument(
-        "--resume-path",
+        "--resume-path-dir",
         type=str,
         default="",
-        help="the path of agent pth file " "for resuming from a pre-trained agent",
+        help="the path of all agents' pth file " "for resuming from a pre-trained agent",
     )
     parser.add_argument(
         "--opponent-path",
@@ -96,70 +98,40 @@ def get_args() -> argparse.Namespace:
     parser = get_parser()
     return parser.parse_known_args()[0]
 
+def get_env(
+    args: argparse.Namespace = get_args(), 
+    render_mode=None
+)-> PettingZooEnv: 
+    return PettingZooEnv(simple_spread_v2.env(N=args.n_agents, local_ratio=0.5, max_cycles=25, continuous_actions=args.continuous_actions))
 
-def get_agents(
-    args: argparse.Namespace = get_args(),
-    agent_learn: Optional[BasePolicy] = None,
-    agent_opponent: Optional[BasePolicy] = None,
-    optim: Optional[torch.optim.Optimizer] = None,
-) -> Tuple[BasePolicy, torch.optim.Optimizer, list]:
+
+if __name__ == "__main__":
+
+    args = get_args()
     env = get_env()
-    observation_space = (
-        env.observation_space["observation"]
-        if isinstance(env.observation_space, gym.spaces.Dict)
-        else env.observation_space
-    )
-    args.state_shape = (
-        # observation_space["observation"].shape or observation_space["observation"].n
-        observation_space.shape or observation_space.n
-    )
+
+    args.state_shape = (env.observation_space.shape or env.observation_space.n)
     args.action_shape = env.action_space.shape or env.action_space.n
-    if agent_learn is None:
-        # model
-        net = Net(
-            args.state_shape,
-            args.action_shape,
-            hidden_sizes=args.hidden_sizes,
-            device=args.device,
-        ).to(args.device)
-        if optim is None:
-            optim = torch.optim.Adam(net.parameters(), lr=args.lr)
-        agent_learn = DQNPolicy(
-            net,
-            optim,
-            args.gamma,
-            args.n_step,
-            target_update_freq=args.target_update_freq,
-        )
-        if args.resume_path:
-            agent_learn.load_state_dict(torch.load(args.resume_path))
+    # model
+    net = Net(
+        args.state_shape,
+        args.action_shape,
+        hidden_sizes=args.hidden_sizes,
+        device=args.device,
+    ).to(args.device)
 
-    if agent_opponent is None:
-        if args.opponent_path:
-            agent_opponent = deepcopy(agent_learn)
-            agent_opponent.load_state_dict(torch.load(args.opponent_path))
-        else:
-            agent_opponent = RandomPolicy()
+    # ======== agent setup =========
+    optim = torch.optim.Adam(net.parameters(), lr=args.lr)
+    agents = [DQNPolicy(
+        net,
+        optim,
+        args.gamma,
+        args.n_step,
+        target_update_freq=args.target_update_freq,
+    ) for a in range(args.n_agents)] 
 
-    if args.agent_id == 1:
-        agents = [agent_learn, agent_opponent]
-    else:
-        agents = [agent_opponent, agent_learn]
     policy = MultiAgentPolicyManager(agents, env)
-    return policy, optim, env.agents
 
-
-def get_env(render_mode=None):
-    return PettingZooEnv(simple_spread_v2.env(N=2, render_mode=render_mode))
-    # return PettingZooEnv(tictactoe_v3.env(render_mode=render_mode))
-
-
-def train_agent(
-    args: argparse.Namespace = get_args(),
-    agent_learn: Optional[BasePolicy] = None,
-    agent_opponent: Optional[BasePolicy] = None,
-    optim: Optional[torch.optim.Optimizer] = None,
-) -> Tuple[dict, BasePolicy]:
     # ======== environment setup =========
     train_envs = DummyVectorEnv([get_env for _ in range(args.training_num)])
     test_envs = DummyVectorEnv([get_env for _ in range(args.test_num)])
@@ -168,11 +140,6 @@ def train_agent(
     torch.manual_seed(args.seed)
     train_envs.seed(args.seed)
     test_envs.seed(args.seed)
-
-    # ======== agent setup =========
-    policy, optim, agents = get_agents(
-        args, agent_learn=agent_learn, agent_opponent=agent_opponent, optim=optim
-    )
 
     # ======== collector setup =========
     train_collector = Collector(
@@ -186,78 +153,30 @@ def train_agent(
     train_collector.collect(n_step=args.batch_size * args.training_num)
 
     # ======== tensorboard logging setup =========
-    log_path = os.path.join(args.logdir, "tic_tac_toe", "dqn")
+    log_path = os.path.join(args.logdir, "simple_spread_discrete", "dqn")
     writer = SummaryWriter(log_path)
     writer.add_text("args", str(args))
     logger = TensorboardLogger(writer)
 
-    # ======== callback functions used during training =========
-    def save_best_fn(policy):
-        if hasattr(args, "model_save_path"):
-            model_save_path = args.model_save_path
-        else:
-            model_save_path = os.path.join(
-                args.logdir, "tic_tac_toe", "dqn", "policy.pth"
-            )
-        torch.save(
-            policy.policies[agents[args.agent_id - 1]].state_dict(), model_save_path
-        )
+    # # trainer
+    # result = offpolicy_trainer(
+    #     policy,
+    #     train_collector,
+    #     test_collector,
+    #     args.epoch,
+    #     args.step_per_epoch,
+    #     args.step_per_collect,
+    #     args.test_num,
+    #     args.batch_size,
+    #     update_per_step=args.update_per_step,
+    #     logger=logger,
+    #     test_in_train=False,
+    # )
 
-    def stop_fn(mean_rewards):
-        return mean_rewards >= args.win_rate
-
-    def train_fn(epoch, env_step):
-        policy.policies[agents[args.agent_id - 1]].set_eps(args.eps_train)
-
-    def test_fn(epoch, env_step):
-        policy.policies[agents[args.agent_id - 1]].set_eps(args.eps_test)
-
-    def reward_metric(rews):
-        return rews[:, args.agent_id - 1]
-
-    # trainer
-    result = offpolicy_trainer(
-        policy,
-        train_collector,
-        test_collector,
-        args.epoch,
-        args.step_per_epoch,
-        args.step_per_collect,
-        args.test_num,
-        args.batch_size,
-        train_fn=train_fn,
-        test_fn=test_fn,
-        stop_fn=stop_fn,
-        save_best_fn=save_best_fn,
-        update_per_step=args.update_per_step,
-        logger=logger,
-        test_in_train=False,
-        reward_metric=reward_metric,
-    )
-
-    return result, policy.policies[agents[args.agent_id - 1]]
-
-
-# ======== a test function that tests a pre-trained agent ======
-def watch(
-    args: argparse.Namespace = get_args(),
-    agent_learn: Optional[BasePolicy] = None,
-    agent_opponent: Optional[BasePolicy] = None,
-) -> None:
-    env = DummyVectorEnv([lambda: get_env(render_mode="human")])
-    policy, optim, agents = get_agents(
-        args, agent_learn=agent_learn, agent_opponent=agent_opponent
-    )
-    policy.eval()
-    policy.policies[agents[args.agent_id - 1]].set_eps(args.eps_test)
-    collector = Collector(policy, env, exploration_noise=True)
-    result = collector.collect(n_episode=1, render=args.render)
-    rews, lens = result["rews"], result["lens"]
-    print(f"Final reward: {rews[:, args.agent_id - 1].mean()}, length: {lens.mean()}")
-
-
-if __name__ == "__main__":
-    # train the agent and watch its performance in a match!
-    args = get_args()
-    result, agent = train_agent(args)
-    watch(args, agent)
+    for i in range(300):  # total step
+        collect_result = train_collector.collect(n_episode=100)
+        if i % 5 == 0:
+            result = test_collector.collect(n_episode=100)
+            print(f'Test mean returns: {result["rews"].mean()}')
+        # train policy with a sampled batch data from buffer
+        losses = policy.update(64, train_collector.buffer)

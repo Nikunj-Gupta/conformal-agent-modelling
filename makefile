@@ -1,7 +1,7 @@
 all: 
 	clear 
 	# pip install -r req.txt 
-	python noam/noam.py 
+	python ppo/train.py
 
 setup: 
 	module load python/3.8 

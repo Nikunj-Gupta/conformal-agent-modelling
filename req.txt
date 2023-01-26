@@ -1,5 +1,4 @@
-SuperSuit==3.6.0
-torch==1.13.1
-pettingzoo==1.22.0
-packaging==21.3
-git+https://github.com/WillDudley/tianshou.git
+cmake
+multi-agent-ale-py
+autorom[accept-rom-license]
+atari-py
