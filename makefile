@@ -1,7 +1,7 @@
 all: 
 	clear 
 	# pip install -r req.txt 
-	python ppo/train.py
+	python ppo_mpe/train.py 
 
 setup: 
 	module load python/3.8 

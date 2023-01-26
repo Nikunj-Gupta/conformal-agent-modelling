@@ -52,57 +52,27 @@ class ActorCritic(nn.Module):
         
         if has_continuous_action_space: 
             self.actor = nn.Sequential(
-                nn.Conv2d(self.in_channels, 32, 3, padding=1),
-                nn.MaxPool2d(2),
+                nn.Linear(state_dim, 64),
                 nn.ReLU(),
-                nn.Conv2d(32, 64, 3, padding=1),
-                nn.MaxPool2d(2),
-                nn.ReLU(),
-                nn.Conv2d(64, 128, 3, padding=1),
-                nn.MaxPool2d(2),
-                nn.ReLU(),
-                nn.Flatten(),
-                nn.Linear(128 * 8 * 8, 512),
-                nn.ReLU(),
-                nn.Linear(512, 64),
+                nn.Linear(64, 64),
                 nn.ReLU(),
                 nn.Linear(64, action_dim)
             ) 
         else: 
             self.actor = nn.Sequential(
-                nn.Conv2d(self.in_channels, 32, 3, padding=1),
-                nn.MaxPool2d(2),
+                nn.Linear(state_dim, 64),
                 nn.ReLU(),
-                nn.Conv2d(32, 64, 3, padding=1),
-                nn.MaxPool2d(2),
-                nn.ReLU(),
-                nn.Conv2d(64, 128, 3, padding=1),
-                nn.MaxPool2d(2),
-                nn.ReLU(),
-                nn.Flatten(),
-                nn.Linear(128 * 8 * 8, 512),
-                nn.ReLU(),
-                nn.Linear(512, 64),
+                nn.Linear(64, 64),
                 nn.ReLU(),
                 nn.Linear(64, action_dim),
                 nn.Softmax(dim=-1)
             )
         self.critic = nn.Sequential(
-            nn.Conv2d(self.in_channels, 32, 3, padding=1),
-            nn.MaxPool2d(2),
+            nn.Linear(state_dim, 64),
             nn.ReLU(),
-            nn.Conv2d(32, 64, 3, padding=1),
-            nn.MaxPool2d(2),
+            nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Conv2d(64, 128, 3, padding=1),
-            nn.MaxPool2d(2),
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(128 * 8 * 8, 512),
-            nn.ReLU(),
-            nn.Linear(512, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1),
+            nn.Linear(64, 1)
         )
 
     def set_action_std(self, new_action_std):
