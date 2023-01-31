@@ -3,3 +3,5 @@ log*
 *.pth
 __pycache__
 autorom/
+MNIST/
+backup/

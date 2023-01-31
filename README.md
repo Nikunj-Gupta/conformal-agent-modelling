@@ -24,3 +24,8 @@ python -m atari_py.import_roms <path-to-roms>
 ```
 
 Good to go! 
+
+#### Code references 
+- [PPO-Pytorch](https://github.com/nikhilbarhate99/PPO-PyTorch) 
+- [few-shot-cp](https://github.com/ajfisch/few-shot-cp)
+- [LIAM](https://github.com/uoe-agents/LIAM) 
