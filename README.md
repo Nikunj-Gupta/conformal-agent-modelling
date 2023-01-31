@@ -29,3 +29,4 @@ Good to go!
 - [PPO-Pytorch](https://github.com/nikhilbarhate99/PPO-PyTorch) 
 - [few-shot-cp](https://github.com/ajfisch/few-shot-cp)
 - [LIAM](https://github.com/uoe-agents/LIAM) 
+- [VAE](https://github.com/AntixK/PyTorch-VAE/blob/master/models/vanilla_vae.py)
