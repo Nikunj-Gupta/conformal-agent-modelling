@@ -1,3 +1,4 @@
+.DS_Store
 venv/
 log*
 *.pth
@@ -5,3 +6,4 @@ __pycache__
 autorom/
 MNIST/
 backup/
+ppo_mpe_hammer/
