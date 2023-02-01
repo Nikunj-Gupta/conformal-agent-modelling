@@ -2,6 +2,7 @@
 venv/
 log*
 *.pth
+*.pt
 __pycache__
 autorom/
 MNIST/
