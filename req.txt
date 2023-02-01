@@ -1,4 +1,12 @@
-cmake
 multi-agent-ale-py
-autorom[accept-rom-license]
 atari-py
+autorom[accept-rom-license]
+SuperSuit==3.6.0
+torch==1.13.1
+pettingzoo==1.22.0
+packaging==21.3
+matplotlib
+tensorboardX
+Box2D
+box2d 
+box2d-kengz
