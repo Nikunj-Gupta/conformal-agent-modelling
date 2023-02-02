@@ -1,0 +1,14 @@
+multi-agent-ale-py
+atari-py
+SuperSuit
+torch
+pettingzoo
+packaging
+matplotlib
+tensorboardX
+Box2D
+box2d 
+box2d-kengz
+tensorboard
+torchvision
+tinyscaler

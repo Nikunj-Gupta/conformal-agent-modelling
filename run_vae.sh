@@ -6,6 +6,7 @@
 #SBATCH --gres=gpu:v100:1
 #SBATCH --output=atari-vae-run.out
 
+# module load python/python/3.10
 source venv/bin/activate
 
 tensorboard --logdir=encoder_decoder/logs --host 0.0.0.0 --load_fast false &
