@@ -30,7 +30,7 @@ kld_weight = 0.00025
 n_agents = 2 
 max_episodes = 10_000 
 max_timesteps = 100_000 
-save_timestep = 5_000 
+save_timestep = 128 
 log_dir = "encoder_decoder/logs/"
 
 # writer = SummaryWriter(log_dir)
@@ -99,9 +99,9 @@ for episode in range(1, max_episodes+1):
             l = loss.item() 
             inputs = agents[0].batchify_obs(state, device).cpu().detach().numpy() 
         
-            writer.add_scalar("1000-Timestep/loss", l, global_timestep) 
-            writer.add_scalar("1000-Timestep/reconstruction loss", recon_loss.item(), global_timestep) 
-            writer.add_scalar("1000-Timestep/KL", kl.item(), global_timestep) 
+            writer.add_scalar("128-Timestep/loss", l, global_timestep) 
+            writer.add_scalar("128-Timestep/reconstruction loss", recon_loss.item(), global_timestep) 
+            writer.add_scalar("128-Timestep/KL", kl.item(), global_timestep) 
 
             losses.append(l)
             recon_losses.append(recon_loss.item()) 

@@ -12,3 +12,4 @@ box2d-kengz
 tensorboard
 torchvision
 tinyscaler
+AutoROM==0.1.19
