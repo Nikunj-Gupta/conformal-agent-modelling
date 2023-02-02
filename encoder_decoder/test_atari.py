@@ -80,7 +80,7 @@ optimizer = optim.Adam(vae.parameters(), lr=learning_rate)
 global_timestep = 0 
 for episode in range(1, max_episodes+1): 
     state = env.reset() 
-    inputs = agents[0].batchify_obs(state, device).detach().numpy() 
+    inputs = agents[0].batchify_obs(state, device).cpu().detach().numpy() 
     losses, recon_losses, KL_losses = [], [], [] 
     for timestep in range(1, max_timesteps+1): 
         global_timestep+=1 
@@ -88,7 +88,7 @@ for episode in range(1, max_episodes+1):
         for a in range(n_agents): 
             action[env.possible_agents[a]] = agents[a].select_action(agents[a].batchify_obs(state, device))  
         state, reward, done, is_terminals, info = env.step(action) 
-        inputs = np.concatenate((inputs, agents[0].batchify_obs(state, device).detach().numpy())) 
+        inputs = np.concatenate((inputs, agents[0].batchify_obs(state, device).cpu().detach().numpy())) 
         if timestep % save_timestep == 0: 
             inputs = torch.FloatTensor(inputs).to(device)
             recons = vae.forward(inputs) 
@@ -97,7 +97,7 @@ for episode in range(1, max_episodes+1):
             loss.backward()
             optimizer.step()
             l = loss.item() 
-            inputs = agents[0].batchify_obs(state, device).detach().numpy() 
+            inputs = agents[0].batchify_obs(state, device).cpu().detach().numpy() 
         
             writer.add_scalar("1000-Timestep/loss", l, global_timestep) 
             writer.add_scalar("1000-Timestep/reconstruction loss", recon_loss.item(), global_timestep) 
