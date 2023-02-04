@@ -179,7 +179,7 @@ if __name__ == "__main__":
             transforms.Normalize(0.5, 1)
             ]
     )
-    mnist = torchvision.datasets.MNIST('./', download=True, transform=transform)
+    mnist = torchvision.datasets.MNIST('./', download=False, transform=transform)
 
     # hyperparams 
     batch_size = 128
@@ -209,11 +209,12 @@ if __name__ == "__main__":
         for data in dataloader:
             inputs, _ = data
             optimizer.zero_grad()
-            recons = vae.forward(inputs)
+            recons = vae.forward(inputs.to(device))
             loss_dict = vae.loss_function(*recons, kld_weight=kld_weight) 
             loss, recon_loss, kl = loss_dict["loss"], loss_dict["Reconstruction_Loss"], loss_dict["KLD"]
             loss.backward()
             optimizer.step()
             l = loss.item()         
-        print(epoch, l, recon_loss.item(), kl.item())
+        print("Epoch: {}, Loss: {}, Recon loss: {}, KL: {}".format(epoch, l, recon_loss.item(), kl.item()))
+        torch.save(vae, 'encoder_decoder/logs/mnist_vae.pt')
 
