@@ -8,11 +8,13 @@ import torch, numpy as np, argparse, os
 parser = argparse.ArgumentParser() 
 parser.add_argument("--seed", type=int) 
 parser.add_argument("--n_agents", type=int)
+parser.add_argument("--random_other_agent", type=int)
 parser.add_argument("--log_dir", type=str)
 args = parser.parse_known_args()[0] 
 
-log_name = "noam"  
+log_name = ["noam"]  
 log_name.append("n_" + str(args.n_agents)) 
+log_name.append("random_other_agent_" + str(args.random_other_agent)) 
 log_name.append("seed_" + str(args.seed)) 
 log_name = "--".join(log_name) 
 
@@ -48,11 +50,16 @@ env.reset(seed=args.seed)
 state_dim = env.observation_space(env.possible_agents[0]).shape[0]
 action_dim = env.action_space(env.possible_agents[0]).shape[0] if hyperparams["has_continuous_action_space"] else env.action_space(env.possible_agents[0]).n 
 
-agents = [
-    PPO(state_dim, action_dim, hyperparams), 
-    # PPO(state_dim, action_dim, hyperparams), 
-    RandomPolicy(action_dim, hyperparams) 
-]
+if args.random_other_agent: 
+    agents = [
+        PPO(state_dim, action_dim, hyperparams), 
+        RandomPolicy(action_dim, hyperparams) 
+    ]
+else: 
+    agents = [
+        PPO(state_dim, action_dim, hyperparams), 
+        PPO(state_dim, action_dim, hyperparams) 
+    ] 
 
 writer = SummaryWriter(hyperparams["logs_dir"])
 
