@@ -8,3 +8,4 @@ autorom/
 MNIST/
 backup/
 ppo_mpe_hammer/
+final_logs/
