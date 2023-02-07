@@ -36,8 +36,8 @@ class VAE(nn.Module):
             )
             in_channels = h_dim
         self.encoder = nn.Sequential(*modules)
-        self.fc_mu = nn.Linear(hidden_dims[-1]*4, latent_dim)
-        self.fc_var = nn.Linear(hidden_dims[-1]*4, latent_dim)
+        self.fc_mu = nn.Linear(hidden_dims[-1]*64, latent_dim)
+        self.fc_var = nn.Linear(hidden_dims[-1]*64, latent_dim)
 
         """
         Build Decoder 
