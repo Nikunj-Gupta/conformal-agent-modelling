@@ -10,11 +10,13 @@ sys.setrecursionlimit(10000)
 parser = argparse.ArgumentParser() 
 parser.add_argument("--seed", type=int, default=0) 
 parser.add_argument("--n_agents", type=int, default=2)
+parser.add_argument("--cp_update_timestep", type=int, default=30)
 parser.add_argument("--log_dir", type=str, default="./mpe-logs")
 args = parser.parse_known_args()[0] 
 
 log_name = ["cam_new"]  
 log_name.append("n_" + str(args.n_agents)) 
+log_name.append("cp_update_timestep_" + str(args.cp_update_timestep)) 
 log_name.append("seed_" + str(args.seed)) 
 log_name = "--".join(log_name) 
 
@@ -24,7 +26,7 @@ hyperparams = {
     "initial_start_episodes":50,
     "max_cycles":25,
     "update_timestep": 30, 
-    "cp_update_timestep": 50, 
+    "cp_update_timestep": args.cp_update_timestep, 
     "save_model_freq": 5_000, 
     "logs_dir": os.path.join(args.log_dir, log_name), 
     "action_std_decay_rate": 0.05, 
