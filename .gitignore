@@ -9,3 +9,5 @@ MNIST/
 backup/
 ppo_mpe_hammer/
 final_logs/
+.ipynb_checkpoints/
+data/
