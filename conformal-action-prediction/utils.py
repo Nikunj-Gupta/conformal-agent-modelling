@@ -166,9 +166,11 @@ def get_model(modelname):
     return model
 
 # Computes logits and targets from a model and loader
-def get_logits_targets(model, loader):
+def get_logits_targets(model, loader, num_classes):
     # logits = torch.zeros((len(loader.dataset), 1000)) # 1000 classes in Imagenet.
-    logits = torch.zeros((len(loader.dataset), 10)) # 10 classes in CIFAR10.
+    # logits = torch.zeros((len(loader.dataset), 10)) # 10 classes in CIFAR10.
+    logits = torch.zeros((len(loader.dataset), num_classes)) # Generalized 
+
     labels = torch.zeros((len(loader.dataset),))
     i = 0
     print(f'Computing logits for model (only happens once).')
