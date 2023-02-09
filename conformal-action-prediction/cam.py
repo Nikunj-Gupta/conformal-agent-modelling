@@ -5,6 +5,15 @@ from conformal import ConformalModel
 from utils import * 
 
 
+class RolloutBuffer:
+    def __init__(self):
+        self.actions = []
+        self.states = []
+    
+    def clear(self):
+        del self.actions[:]
+        del self.states[:]
+
 class CPDataset(torch.utils.data.Dataset):
     def __init__(self, states, actions):
         states = np.array([s.detach().cpu().numpy() for s in states]) 
@@ -55,9 +64,11 @@ class CAM:
         self.state_dim = state_dim 
         self.act_dim = act_dim 
         self.model = NN(in_dim=state_dim, out_dim=act_dim) 
+        self.buffer = RolloutBuffer() 
         
-    def create_cp_dataset(self, states, actions, batch_size=128, val_frac=0.1, shuffle=True, pin_memory=True): 
-        cp_data = CPDataset(states, actions) 
+    def create_cp_dataset(self, batch_size=128, val_frac=0.1, shuffle=True, pin_memory=True): 
+        cp_data = CPDataset(self.buffer.states, self.buffer.actions) 
+        self.buffer.clear() 
 
         # TODO: Decide: Split into train/test to validate? Train on all prefered. But then how to validate? 
         self.calib_loader = torch.utils.data.DataLoader(cp_data, batch_size=batch_size, shuffle=shuffle, pin_memory=pin_memory)
@@ -91,9 +102,13 @@ class CAM:
                 correct += predicted.eq(targets).sum().item()
                 print(batch_idx, len(self.calib_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                             % (train_loss/(batch_idx+1), 100.*correct/total, correct, total)) 
+
+        
         print("Prediction Model trained!")
         
         self.conformalize_model() 
+
+        return train_loss/(batch_idx+1), 100.*correct/total 
 
     def conformalize_model(self): 
         self.model = torch.nn.DataParallel(self.model) 
@@ -115,7 +130,7 @@ class CAM:
         print("Model calibrated and conformalized! Now evaluate over remaining data.")  
     
     def get_conformal_action_predictions(self, obs): 
-        print("Getting conformal action predictions") 
+        # print("Getting conformal action predictions") 
         with torch.no_grad():
             # switch to evaluate mode
             self.conformal_model.eval() 
@@ -132,6 +147,8 @@ class CAM:
 
     def validate_model(self): 
         print("Validating conformal action predictions") 
-        validate(self.val_loader, self.model, print_bool=True)
+        top1_avg, top5_avg, coverage_avg, size_avg = validate(self.val_loader, self.conformal_model, print_bool=True)
         # validate_new(val_loader, model, print_bool=True)
-        print("Complete!")
+        print("Complete!") 
+        return top1_avg, top5_avg, coverage_avg, size_avg  
+
