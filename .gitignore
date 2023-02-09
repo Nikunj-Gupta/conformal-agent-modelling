@@ -1,6 +1,6 @@
 .DS_Store
 venv/
-log*
+*log*
 *.pth
 *.pt
 __pycache__

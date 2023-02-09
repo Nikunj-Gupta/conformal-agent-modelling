@@ -50,3 +50,4 @@ Note: If `AutoROM --install-dir <path/to/install/roms>` does not work on compute
 - [few-shot-cp](https://github.com/ajfisch/few-shot-cp)
 - [LIAM](https://github.com/uoe-agents/LIAM) 
 - [VAE](https://github.com/AntixK/PyTorch-VAE/blob/master/models/vanilla_vae.py)
+- [Conformal-Classification](https://github.com/aangelopoulos/conformal_classification) 
