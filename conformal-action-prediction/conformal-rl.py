@@ -4,7 +4,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torch, numpy as np, argparse, os 
 from cam import CAM 
 import sys 
-sys.setrecursionlimit(2000) 
+sys.setrecursionlimit(10000) 
 
 
 parser = argparse.ArgumentParser() 
@@ -13,7 +13,7 @@ parser.add_argument("--n_agents", type=int, default=2)
 parser.add_argument("--log_dir", type=str, default="./mpe-logs")
 args = parser.parse_known_args()[0] 
 
-log_name = ["cam"]  
+log_name = ["cam_new"]  
 log_name.append("n_" + str(args.n_agents)) 
 log_name.append("seed_" + str(args.seed)) 
 log_name = "--".join(log_name) 
@@ -119,9 +119,6 @@ for i_episode in range(1, hyperparams["max_episodes"]+1):
         writer.add_scalar("cp/top5_avg", top5_avg, i_episode) 
         writer.add_scalar("cp/coverage_avg", coverage_avg, i_episode) 
         writer.add_scalar("cp/size_avg", size_avg, i_episode) 
-
-        ego_agent.update() 
-        other_agent.update() 
 
     # update PPO agent
     if i_episode % hyperparams["update_timestep"] == 0: 

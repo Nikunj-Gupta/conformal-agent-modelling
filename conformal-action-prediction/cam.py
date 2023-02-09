@@ -16,8 +16,10 @@ class RolloutBuffer:
 
 class CPDataset(torch.utils.data.Dataset):
     def __init__(self, states, actions):
-        states = np.array([s.detach().cpu().numpy() for s in states]) 
-        actions = np.array([a.detach().cpu().numpy() for a in actions]) 
+        # states = np.array([s.detach().cpu().numpy() for s in states])
+        # actions = np.array([a.detach().cpu().numpy() for a in actions])
+        states = np.array(states)
+        actions = np.array(actions)
         state_dim = states.shape[1] 
         df = pd.DataFrame(states) 
         df["actions"] = actions 
