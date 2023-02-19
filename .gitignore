@@ -12,3 +12,5 @@ final_logs/
 .ipynb_checkpoints/
 data/
 env-search-new/
+cp-reps/
+cam-stack-debug/
