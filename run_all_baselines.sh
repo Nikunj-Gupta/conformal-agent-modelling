@@ -1,4 +1,5 @@
-envs="simple_spread_v2 simple_push_v2 simple_speaker_listener_v3 simple_world_comm_v2"
+# envs="simple_spread_v2 simple_push_v2 simple_speaker_listener_v3 simple_world_comm_v2"
+envs="simple_world_comm_v2 simple_adversary_v2 simple_tag_v2"
 baselines="giam noam"
 for env in $envs
 do
