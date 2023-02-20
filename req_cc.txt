@@ -14,3 +14,5 @@ torchvision
 tinyscaler
 AutoROM==0.1.19
 pygame 
+pandas
+scipy
