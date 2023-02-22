@@ -12,13 +12,14 @@ parser.add_argument("--baseline", type=str)
 
 parser.add_argument("--n_agents", type=int, default=2) 
 parser.add_argument("--n_adversaries", type=int, default=4) 
-parser.add_argument("--max_episodes", type=int, default=100_000) 
+parser.add_argument("--modify_obs", type=int, default=0) 
+parser.add_argument("--max_episodes", type=int, default=200_000) 
 parser.add_argument("--max_cycles", type=int, default=25) 
 parser.add_argument("--update_timestep", type=int, default=30) 
 parser.add_argument("--save_model_freq", type=int, default=5_000) 
 
 parser.add_argument("--seed", type=int, default=0) 
-parser.add_argument("--log_dir", type=str, default="./env-search-new") 
+parser.add_argument("--log_dir", type=str, default="./modified-envs") 
 
 args = parser.parse_known_args()[0] 
 
@@ -158,8 +159,35 @@ writer = SummaryWriter(log_dir)
 #         log_dir = temp
 #         break
 
+def modify_obs(obs, version=None): 
+    """
+    Version 1: 
+    Removing only other_pos, other_vel, comm wherever applicable 
+    """
+    if version==1: 
+        if args.envname == "simple_adversary_v2": 
+            obs[env.possible_agents[self_agent_id]][-2:] = 0. # other_pos 
+            obs[env.possible_agents[other_agent_id]][-2:] = 0. # other_pos 
+            return obs 
+        if args.envname == "simple_spread_v2": 
+            obs[env.possible_agents[self_agent_id]][-4:] = 0.  # other_pos and comm 
+            obs[env.possible_agents[other_agent_id]][-4:] = 0. # other_pos and comm 
+            return obs 
+        if args.envname == "simple_tag_v2": 
+            obs[env.possible_agents[self_agent_id]][-4:] = 0.  # other_pos and other_vel
+            obs[env.possible_agents[other_agent_id]][-4:] = 0. # other_pos and other_vel
+            return obs 
+        if args.envname == "simple_world_comm_v2": 
+            obs[env.possible_agents[self_agent_id]][-6:-4] = 0. # other_pos
+            obs[env.possible_agents[self_agent_id]][-2:] = 0. # other_vel
+            obs[env.possible_agents[other_agent_id]][-6:-4] = 0. # other_pos
+            obs[env.possible_agents[other_agent_id]][-2:] = 0. # other_vel
+            return obs 
+    
+
 for i_episode in range(1, hyperparams["max_episodes"]+1): 
     state = env.reset() 
+    if args.modify_obs: state = modify_obs(state, version=args.modify_obs) 
     ep_reward = 0 
     all_rewards = defaultdict(float) 
 
@@ -183,6 +211,7 @@ for i_episode in range(1, hyperparams["max_episodes"]+1):
             prev_a_other[int(action[env.possible_agents[other_agent_id]])] = 1. 
 
         state, reward, done, is_terminals, info = env.step(action) 
+        if args.modify_obs: state = modify_obs(state, version=args.modify_obs) 
 
         # saving reward and is_terminals
         self_agent.buffer.rewards.append(reward[env.possible_agents[self_agent_id]])

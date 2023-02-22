@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --time=10:00:00
+#SBATCH --time=20:00:00
 #SBATCH --account=rrg-ebrahimi
 #SBATCH --mem=64G
 #SBATCH --output=out/%x_%A.out
@@ -17,4 +17,4 @@ baseline=${2}
 
 runs=${SLURM_ARRAY_TASK_ID}
 
-time python baselines/baselines.py --envname=$env --baseline=$baseline --log_dir=env-search-2 --seed=$runs 
+time python baselines/baselines.py --envname=$env --baseline=$baseline --log_dir=env-search-2 --seed=$runs --modify_obs 1 
