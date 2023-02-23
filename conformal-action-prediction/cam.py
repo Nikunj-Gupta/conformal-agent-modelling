@@ -45,11 +45,20 @@ class NN(nn.Module):
         self.fc2   = nn.Linear(hidden_dim, hidden_dim)
         self.fc3   = nn.Linear(hidden_dim, out_dim) 
 
-    def forward(self, x):
+    def forward_half(self, x): 
         out = F.relu(self.fc1(x))
-        out = F.relu(self.fc2(out))
-        out = self.fc3(out)
-        return out
+        out = F.relu(self.fc2(out)) 
+        return out 
+    
+    def forward(self, x, path="all"): 
+        if path=="all": 
+            out = self.forward_half(x) 
+            out = self.fc3(out)
+        elif path=="half": 
+            out = self.forward_half(x) 
+        else:
+            raise NotImplementedError 
+        return out 
 
 """
 
@@ -138,6 +147,13 @@ class CAM:
             self.conformal_model.eval() 
             output, S = self.conformal_model(obs) 
         return output, S 
+    
+    def get_conformal_action_representations(self, obs): 
+        with torch.no_grad(): 
+            # switch to evaluate mode
+            self.model.eval() 
+            reps = self.model(obs, path="half") 
+        return reps 
 
     def get_single_action_prediction(self, obs): 
         print("Getting single action predictions") 
