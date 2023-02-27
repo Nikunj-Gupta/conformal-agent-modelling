@@ -11,22 +11,22 @@ parser.add_argument("--envname", type=str)
 parser.add_argument("--baseline", type=str) 
 
 parser.add_argument("--n_agents", type=int, default=2) 
-parser.add_argument("--n_adversaries", type=int, default=4) 
+parser.add_argument("--n_adversaries", type=int, default=1) 
+parser.add_argument("--n_obstacles", type=int, default=2) 
 parser.add_argument("--modify_obs", type=int, default=0) 
 parser.add_argument("--max_episodes", type=int, default=200_000) 
 parser.add_argument("--max_cycles", type=int, default=25) 
 parser.add_argument("--update_timestep", type=int, default=30) 
-parser.add_argument("--save_model_freq", type=int, default=5_000) 
+parser.add_argument("--save_model_freq", type=int, default=10_000) 
 
 parser.add_argument("--seed", type=int, default=0) 
-parser.add_argument("--log_dir", type=str, default="./modified-envs") 
+parser.add_argument("--log_dir", type=str, default="./debug_logs/simple-tag-1_adv-2_obs") 
 
 args = parser.parse_known_args()[0] 
 
 log_name = [
-    args.baseline, 
     args.envname, 
-    "n_" + str(args.n_agents)
+    args.baseline
 ] 
 log_name.append("seed_" + str(args.seed)) 
 log_name = "--".join(log_name) 
@@ -35,6 +35,7 @@ hyperparams = {
     # ENV / EXP hyperparams 
     "n_agents": args.n_agents, 
     "n_adversaries": args.n_adversaries, 
+    "n_obstacles": args.n_obstacles, 
     "max_episodes": args.max_episodes, 
     "max_cycles": args.max_cycles, 
     "update_timestep": args.update_timestep, 
@@ -106,6 +107,7 @@ if args.envname == "simple_tag_v2":
     env = simple_tag_v2.parallel_env(
         num_good=hyperparams["n_agents"], 
         num_adversaries=hyperparams["n_adversaries"], 
+        num_obstacles=hyperparams["n_obstacles"], 
         continuous_actions=hyperparams["has_continuous_action_space"]
     ) 
     print(env.possible_agents) 
@@ -183,11 +185,55 @@ def modify_obs(obs, version=None):
             obs[env.possible_agents[other_agent_id]][-6:-4] = 0. # other_pos
             obs[env.possible_agents[other_agent_id]][-2:] = 0. # other_vel
             return obs 
+    """
+    Version 2: 
+    """
+    if version==2: 
+        if args.envname == "simple_adversary_v2": 
+            obs[env.possible_agents[self_agent_id]][-2:] = 0. # other_pos 
+            obs[env.possible_agents[self_agent_id]][-6:-4] = 0. # goal_rel_pos  
+            obs[env.possible_agents[other_agent_id]][-2:] = 0. # other_pos 
+            return obs 
     
+    """
+    Version 3: 
+    """
+    if version==3: 
+        if args.envname == "simple_adversary_v2": 
+            obs[env.possible_agents[self_agent_id]][-4:] = 0. # other_pos + landmark_rel 
+            obs[env.possible_agents[other_agent_id]][-4:] = 0. # other_pos + landmark_rel 
+            return obs 
+
+    """
+    Version 4: 
+    """
+    if version==4: 
+        if args.envname == "simple_adversary_v2": 
+            obs[env.possible_agents[self_agent_id]][-2:] = 0. # other_pos 
+            obs[env.possible_agents[other_agent_id]][-2:] = 0. # other_pos 
+
+            obs[env.possible_agents[self_agent_id]][-6:-4] = 0. # does not know goal_rel_pos  
+            obs[env.possible_agents[other_agent_id]][-4:-2] = 0. # does not know landmark_rel 
+
+            return obs 
+
+    """
+    Version 5: 
+    """
+    if version==5: 
+        if args.envname == "simple_adversary_v2": 
+            obs[env.possible_agents[self_agent_id]][-2:] = 0. # other_pos 
+            obs[env.possible_agents[other_agent_id]][-2:] = 0. # other_pos 
+
+            obs[env.possible_agents[self_agent_id]][-4:-2] = 0. # does not know landmark_rel
+            obs[env.possible_agents[other_agent_id]][-6:-4] = 0. # does not know goal_rel_pos
+
+            return obs 
 
 for i_episode in range(1, hyperparams["max_episodes"]+1): 
     state = env.reset() 
     if args.modify_obs: state = modify_obs(state, version=args.modify_obs) 
+    ep_team_reward = 0 
     ep_reward = 0 
     all_rewards = defaultdict(float) 
 
@@ -226,7 +272,7 @@ for i_episode in range(1, hyperparams["max_episodes"]+1):
                 adversary_agents[i].buffer.rewards.append(reward[env.possible_agents[a]])
                 adversary_agents[i].buffer.is_terminals.append(done[env.possible_agents[a]])
        
-        # ep_reward += sum([reward[env.possible_agents[a]] for a in range(hyperparams["n_agents"])])/hyperparams["n_agents"]  # mean 
+        ep_team_reward += (reward[env.possible_agents[self_agent_id]] + reward[env.possible_agents[other_agent_id]]) / 2   # mean 
         ep_reward += reward[env.possible_agents[self_agent_id]] # tracking only ego agent's rewards 
         for a in env.possible_agents: all_rewards[a] += reward[a] # tracking all agents' rewards 
 
@@ -255,6 +301,7 @@ for i_episode in range(1, hyperparams["max_episodes"]+1):
 
     print("Episode : {} \t\t Self agent reward : {}".format(i_episode, ep_reward)) 
     writer.add_scalar("self_reward", ep_reward, i_episode) 
+    writer.add_scalar("good_team_reward", ep_team_reward, i_episode) 
     for a in env.possible_agents: 
         writer.add_scalar(a+"_reward", all_rewards[a], i_episode) 
     if (i_episode % hyperparams["save_model_freq"])==0: 
