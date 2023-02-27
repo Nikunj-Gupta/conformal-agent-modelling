@@ -5,12 +5,5 @@ venv/
 *.pt
 __pycache__
 autorom/
-MNIST/
 backup/
-ppo_mpe_hammer/
-final_logs/
 .ipynb_checkpoints/
-data/
-env-search-new/
-cp-reps/
-cam-stack-debug/
