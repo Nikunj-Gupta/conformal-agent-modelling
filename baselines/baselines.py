@@ -12,17 +12,17 @@ parser.add_argument("--baseline", type=str)
 
 parser.add_argument("--num_good", type=int, default=1) 
 parser.add_argument("--num_adversaries", type=int, default=2) 
-parser.add_argument("--num_obstacles", type=int, default=2) 
+parser.add_argument("--num_obstacles", type=int, default=3) 
 parser.add_argument("--num_food", type=int, default=1) 
 parser.add_argument("--num_forests", type=int, default=1) 
 parser.add_argument("--modify_obs", type=int, default=0) 
-parser.add_argument("--max_episodes", type=int, default=200_000) 
+parser.add_argument("--max_episodes", type=int, default=50_000) 
 parser.add_argument("--max_cycles", type=int, default=25) 
 parser.add_argument("--update_timestep", type=int, default=30) 
 parser.add_argument("--save_model_freq", type=int, default=10_000) 
 
 parser.add_argument("--seed", type=int, default=0) 
-parser.add_argument("--log_dir", type=str, default="./debug_logs/simple-tag/adv_co_op2") 
+parser.add_argument("--log_dir", type=str, default="./debug_logs/simple-tag/adv_co_op3") 
 
 args = parser.parse_known_args()[0] 
 
@@ -30,6 +30,7 @@ log_name = [
     args.envname, 
     args.baseline
 ] 
+log_name.append("num_obstacles_" + str(args.num_obstacles)) 
 log_name.append("seed_" + str(args.seed)) 
 log_name = "--".join(log_name) 
 
@@ -37,7 +38,7 @@ hyperparams = {
     # ENV / EXP hyperparams 
     "num_good": args.num_good, 
     "num_adversaries": args.num_adversaries, 
-    "num_obstacles": args.num_obstacles, 
+    "num_obstacles": int(args.num_obstacles), 
     "num_food": args.num_food, 
     "num_forests": args.num_forests, 
     "max_episodes": args.max_episodes, 
