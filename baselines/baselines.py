@@ -10,9 +10,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--envname", type=str) 
 parser.add_argument("--baseline", type=str) 
 
-parser.add_argument("--n_agents", type=int, default=2) 
-parser.add_argument("--n_adversaries", type=int, default=1) 
-parser.add_argument("--n_obstacles", type=int, default=2) 
+parser.add_argument("--num_good", type=int, default=1) 
+parser.add_argument("--num_adversaries", type=int, default=2) 
+parser.add_argument("--num_obstacles", type=int, default=2) 
+parser.add_argument("--num_food", type=int, default=1) 
+parser.add_argument("--num_forests", type=int, default=1) 
 parser.add_argument("--modify_obs", type=int, default=0) 
 parser.add_argument("--max_episodes", type=int, default=200_000) 
 parser.add_argument("--max_cycles", type=int, default=25) 
@@ -20,7 +22,7 @@ parser.add_argument("--update_timestep", type=int, default=30)
 parser.add_argument("--save_model_freq", type=int, default=10_000) 
 
 parser.add_argument("--seed", type=int, default=0) 
-parser.add_argument("--log_dir", type=str, default="./debug_logs/simple-tag-1_adv-2_obs") 
+parser.add_argument("--log_dir", type=str, default="./debug_logs/simple-tag/adv_co_op2") 
 
 args = parser.parse_known_args()[0] 
 
@@ -33,9 +35,11 @@ log_name = "--".join(log_name)
 
 hyperparams = {
     # ENV / EXP hyperparams 
-    "n_agents": args.n_agents, 
-    "n_adversaries": args.n_adversaries, 
-    "n_obstacles": args.n_obstacles, 
+    "num_good": args.num_good, 
+    "num_adversaries": args.num_adversaries, 
+    "num_obstacles": args.num_obstacles, 
+    "num_food": args.num_food, 
+    "num_forests": args.num_forests, 
     "max_episodes": args.max_episodes, 
     "max_cycles": args.max_cycles, 
     "update_timestep": args.update_timestep, 
@@ -62,7 +66,7 @@ other_agent_id = None
 
 if args.envname == "simple_spread_v2": 
     env = simple_spread_v2.parallel_env(
-        N=hyperparams["n_agents"], 
+        N=hyperparams["num_good"], 
         continuous_actions=hyperparams["has_continuous_action_space"] 
     )
     print(env.possible_agents) 
@@ -83,19 +87,22 @@ if args.envname == "simple_speaker_listener_v3":
 
 if args.envname == "simple_world_comm_v2": 
     env = simple_world_comm_v2.parallel_env(
-        num_good=hyperparams["n_agents"], 
-        num_adversaries=hyperparams["n_adversaries"], 
+        num_good=hyperparams["num_good"], 
+        num_adversaries=hyperparams["num_adversaries"], 
+        num_obstacles=hyperparams["num_obstacles"], 
+        num_food=hyperparams["num_food"], 
+        num_forests=hyperparams["num_forests"], 
         continuous_actions=hyperparams["has_continuous_action_space"]
     ) 
     print(env.possible_agents) 
     lead_adversary_id = 0  
-    adversary_ids = list(range(1, hyperparams["n_adversaries"])) 
-    self_agent_id = hyperparams["n_adversaries"] - 1 + 1  
-    other_agent_id = hyperparams["n_adversaries"] - 1 + 2 
+    adversary_ids = list(range(1, hyperparams["num_adversaries"])) 
+    self_agent_id = hyperparams["num_adversaries"] - 1 + 1  
+    other_agent_id = hyperparams["num_adversaries"] - 1 + 2 
 
 if args.envname == "simple_adversary_v2": 
     env = simple_adversary_v2.parallel_env(
-        N=hyperparams["n_agents"], 
+        N=hyperparams["num_good"], 
         continuous_actions=hyperparams["has_continuous_action_space"]
     ) 
     print(env.possible_agents) 
@@ -105,15 +112,20 @@ if args.envname == "simple_adversary_v2":
 
 if args.envname == "simple_tag_v2": 
     env = simple_tag_v2.parallel_env(
-        num_good=hyperparams["n_agents"], 
-        num_adversaries=hyperparams["n_adversaries"], 
-        num_obstacles=hyperparams["n_obstacles"], 
+        num_good=hyperparams["num_good"], 
+        num_adversaries=hyperparams["num_adversaries"], 
+        num_obstacles=hyperparams["num_obstacles"], 
         continuous_actions=hyperparams["has_continuous_action_space"]
     ) 
     print(env.possible_agents) 
-    adversary_ids = list(range(hyperparams["n_adversaries"])) 
-    self_agent_id = hyperparams["n_adversaries"] - 1 + 1 
-    other_agent_id = hyperparams["n_adversaries"] - 1 + 2 
+    # adversary_ids = list(range(hyperparams["num_adversaries"])) 
+    # self_agent_id = hyperparams["num_adversaries"] - 1 + 1 
+    # other_agent_id = hyperparams["num_adversaries"] - 1 + 2 
+    self_agent_id = 0 # adversary 0 
+    other_agent_id = 1 # adversary 1 
+    adversary_ids = [2] # list(range(2, hyperparams["num_good"])) 
+    
+
 
 # seed
 np.random.seed(args.seed)
@@ -138,13 +150,16 @@ if adversary_ids!=None:
     adversary_agents = [PPO(adversary_state_dim, adversary_action_dim, hyperparams) for _ in adversary_ids] # Adversary agents 
 # self agent's state and action dimensions based on baseline 
 
-if args.baseline == "noam": 
+if args.baseline == "noam": # no other agent modeling 
     self_state_dim = env.observation_space(env.possible_agents[self_agent_id]).shape[0]
-    self_action_dim = env.action_space(env.possible_agents[self_agent_id]).shape[0] if hyperparams["has_continuous_action_space"] else env.action_space(env.possible_agents[self_agent_id]).n 
-if args.baseline == "giam": 
+if args.baseline == "taam": # true action agent modeling  
+    self_state_dim = env.observation_space(env.possible_agents[self_agent_id]).shape[0] + other_action_dim  
+if args.baseline == "toam": # true observation agent modeling 
+    self_state_dim = env.observation_space(env.possible_agents[self_agent_id]).shape[0] + other_state_dim  
+if args.baseline == "giam": # global information agent modeling 
     # current O_self + current O_other + previous a_other (one hot vector) --> a_self
     self_state_dim = env.observation_space(env.possible_agents[self_agent_id]).shape[0] + other_state_dim + other_action_dim 
-    self_action_dim = env.action_space(env.possible_agents[self_agent_id]).shape[0] if hyperparams["has_continuous_action_space"] else env.action_space(env.possible_agents[self_agent_id]).n 
+self_action_dim = env.action_space(env.possible_agents[self_agent_id]).shape[0] if hyperparams["has_continuous_action_space"] else env.action_space(env.possible_agents[self_agent_id]).n 
 self_agent = PPO(self_state_dim, self_action_dim, hyperparams)      # Ego/Self agent 
 
 
@@ -237,12 +252,18 @@ for i_episode in range(1, hyperparams["max_episodes"]+1):
     ep_reward = 0 
     all_rewards = defaultdict(float) 
 
-    if args.baseline == "giam": prev_a_other = np.zeros(other_action_dim) # zero vector as initial value for prev_a_other 
+    if (args.baseline == "giam") or (args.baseline == "taam"): 
+        prev_a_other = np.zeros(other_action_dim) # zero vector as initial value for prev_a_other 
 
     for t in range(1, hyperparams["max_cycles"]+1):
         action = {}
-        if args.baseline == "noam": self_state = state[env.possible_agents[self_agent_id]] 
-        if args.baseline == "giam": 
+        if args.baseline == "noam": 
+            self_state = state[env.possible_agents[self_agent_id]] 
+        elif args.baseline == "taam": 
+            self_state = np.append(state[env.possible_agents[self_agent_id]], prev_a_other) 
+        elif args.baseline == "toam": 
+            self_state = np.append(state[env.possible_agents[self_agent_id]], state[env.possible_agents[other_agent_id]]) 
+        elif args.baseline == "giam": 
             self_state = np.append(state[env.possible_agents[self_agent_id]], state[env.possible_agents[other_agent_id]]) 
             self_state = np.append(self_state, prev_a_other)  
         action[env.possible_agents[self_agent_id]] = self_agent.select_action(self_state) 
@@ -252,7 +273,7 @@ for i_episode in range(1, hyperparams["max_episodes"]+1):
             for i, a in enumerate(adversary_ids): 
                 action[env.possible_agents[a]] = adversary_agents[i].select_action(state[env.possible_agents[a]]) 
 
-        if args.baseline == "giam": 
+        if (args.baseline == "giam") or (args.baseline == "taam"): 
             prev_a_other = np.zeros(other_action_dim) 
             prev_a_other[int(action[env.possible_agents[other_agent_id]])] = 1. 
 
