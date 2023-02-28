@@ -7,7 +7,7 @@ do
     for baseline in $baselines
         do
             mkdir -p out/
-            run_cmd="run_baselines.sh ${env} ${baseline}"
+            run_cmd="scripts/run_baselines.sh ${env} ${baseline}"
             sbatch_cmd="sbatch ${run_cmd}"
             cmd="$sbatch_cmd"
             echo -e "${cmd}"
