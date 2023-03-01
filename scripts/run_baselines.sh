@@ -20,12 +20,12 @@ runs=${SLURM_ARRAY_TASK_ID}
 
 # time python ../baselines/baselines.py --envname=$env --baseline=$baseline --log_dir="debug_logs/simple-tag-1_adv-2_obs/" --seed=$runs 
 # time python baselines/baselines.py --envname=$env --baseline=$baseline --num_good=2 --log_dir="debug_logs/simple_spread_all_baselines/" --seed=$runs --max_episodes=30000
-time python baselines/baselines.py \ 
-                    --envname=$env \ 
-                    --baseline=$baseline \ 
-                    --num_good=1 \ 
-                    --num_adversaries=2 \ 
-                    --num_obstacles=$obstacles
-                    --log_dir="debug_logs/simple_tag_adversary_cooperation_all_baselines/" \ 
-                    --seed=$runs \ 
+time python baselines/baselines.py \
+                    --envname=$env \
+                    --baseline=$baseline \
+                    --num_good=1 \
+                    --num_adversaries=2 \
+                    --num_obstacles=$obstacles \
+                    --log_dir="./debug_logs/simple_tag_adversary_cooperation_all_baselines/" \
+                    --seed=$runs \
                     --max_episodes=200000
