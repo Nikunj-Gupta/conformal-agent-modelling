@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=0) 
 parser.add_argument("--n_agents", type=int, default=2)
 parser.add_argument("--cp_update_timestep", type=int, default=30)
-parser.add_argument("--log_dir", type=str, default="./mpe-logs")
+parser.add_argument("--log_dir", type=str, default="./debug_logs/cam-actions")
 args = parser.parse_known_args()[0] 
 
 log_name = ["cam_new"]  

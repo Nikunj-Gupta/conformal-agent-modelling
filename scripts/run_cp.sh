@@ -16,4 +16,5 @@ cp_update_timestep=${1}
 
 runs=${SLURM_ARRAY_TASK_ID}
 
-time python conformal-action-prediction/conformal-rl-reps-2.py --cp_update_timestep=$cp_update_timestep --log_dir=cp-reps-penultimate --seed=$runs 
+# time python conformal-action-prediction/conformal-rl-reps-2.py --cp_update_timestep=$cp_update_timestep --log_dir=cp-reps-penultimate --seed=$runs 
+time python conformal-action-prediction/conformal-rl.py --cp_update_timestep=$cp_update_timestep --log_dir="./debug_logs/cam-actions" --seed=$runs 
