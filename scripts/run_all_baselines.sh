@@ -8,12 +8,12 @@ for env in $envs
 do
     for obstacle in $obstacles
     do
-        for obstacle in $obstacles
+        for adversary in $adversaries
         do
             for baseline in $baselines
             do
                 mkdir -p out/
-                run_cmd="scripts/run_baselines.sh ${env} ${baseline} ${obstacle}"
+                run_cmd="scripts/run_baselines.sh ${env} ${baseline} ${obstacle} ${adversary}"
                 sbatch_cmd="sbatch ${run_cmd}"
                 cmd="$sbatch_cmd"
                 echo -e "${cmd}"
