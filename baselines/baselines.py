@@ -119,12 +119,12 @@ if args.envname == "simple_tag_v2":
         continuous_actions=hyperparams["has_continuous_action_space"]
     ) 
     print(env.possible_agents) 
-    # adversary_ids = list(range(hyperparams["num_adversaries"])) 
-    # self_agent_id = hyperparams["num_adversaries"] - 1 + 1 
-    # other_agent_id = hyperparams["num_adversaries"] - 1 + 2 
-    self_agent_id = 0 # adversary 0 
-    other_agent_id = 1 # adversary 1 
-    adversary_ids = [2] # list(range(2, hyperparams["num_good"])) 
+    adversary_ids = list(range(hyperparams["num_adversaries"])) 
+    self_agent_id = hyperparams["num_adversaries"] - 1 + 1 
+    other_agent_id = hyperparams["num_adversaries"] - 1 + 2 
+    # self_agent_id = 0 # adversary 0 
+    # other_agent_id = 1 # adversary 1 
+    # adversary_ids = [2] # list(range(2, hyperparams["num_good"])) 
     
 
 

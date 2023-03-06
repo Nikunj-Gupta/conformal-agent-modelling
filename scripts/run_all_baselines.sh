@@ -2,12 +2,15 @@
 # envs="simple_spread_v2 simple_world_comm_v2 simple_adversary_v2 simple_tag_v2" 
 envs="simple_tag_v2" 
 baselines="taam toam noam giam"
+adversaries="1 2 3"
 obstacles="0 1 2 3 4 5"
 for env in $envs
 do
     for obstacle in $obstacles
     do
-        for baseline in $baselines
+        for obstacle in $obstacles
+        do
+            for baseline in $baselines
             do
                 mkdir -p out/
                 run_cmd="scripts/run_baselines.sh ${env} ${baseline} ${obstacle}"
@@ -17,5 +20,6 @@ do
                 ${cmd}
                 sleep 1
             done
+        done
     done
 done
