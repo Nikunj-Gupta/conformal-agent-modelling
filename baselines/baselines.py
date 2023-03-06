@@ -10,11 +10,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--envname", type=str) 
 parser.add_argument("--baseline", type=str) 
 
-parser.add_argument("--num_good", type=int, default=1) 
-parser.add_argument("--num_adversaries", type=int, default=2) 
-parser.add_argument("--num_obstacles", type=int, default=3) 
-parser.add_argument("--num_food", type=int, default=1) 
-parser.add_argument("--num_forests", type=int, default=1) 
+parser.add_argument("--num_good", type=int, default=2) 
+parser.add_argument("--num_adversaries", type=int, default=4) 
+parser.add_argument("--num_obstacles", type=int, default=1) 
+parser.add_argument("--num_food", type=int, default=2) 
+parser.add_argument("--num_forests", type=int, default=2) 
 parser.add_argument("--modify_obs", type=int, default=0) 
 parser.add_argument("--max_episodes", type=int, default=50_000) 
 parser.add_argument("--max_cycles", type=int, default=25) 
@@ -22,7 +22,7 @@ parser.add_argument("--update_timestep", type=int, default=30)
 parser.add_argument("--save_model_freq", type=int, default=10_000) 
 
 parser.add_argument("--seed", type=int, default=0) 
-parser.add_argument("--log_dir", type=str, default="./debug_logs/simple-tag/adv_co_op3") 
+parser.add_argument("--log_dir", type=str, default="./debug_logs/simple-world") 
 
 args = parser.parse_known_args()[0] 
 
@@ -32,6 +32,8 @@ log_name = [
 ] 
 log_name.append("num_obstacles_" + str(args.num_obstacles)) 
 log_name.append("num_adversaries_" + str(args.num_adversaries)) 
+log_name.append("num_food_" + str(args.num_food)) 
+log_name.append("num_forests_" + str(args.num_forests)) 
 log_name.append("seed_" + str(args.seed)) 
 log_name = "--".join(log_name) 
 
