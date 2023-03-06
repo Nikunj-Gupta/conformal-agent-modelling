@@ -31,6 +31,7 @@ log_name = [
     args.baseline
 ] 
 log_name.append("num_obstacles_" + str(args.num_obstacles)) 
+log_name.append("num_adversaries_" + str(args.num_adversaries)) 
 log_name.append("seed_" + str(args.seed)) 
 log_name = "--".join(log_name) 
 
