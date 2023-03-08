@@ -10,6 +10,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("--env", type=str, default="Foraging-12x12-2p-4f-coop-v1") 
 parser.add_argument("--baseline", type=str) 
+parser.add_argument("--max_episodes", type=int, default=500_000) 
 parser.add_argument("--seed", type=int, default=0) 
 parser.add_argument("--log_dir", type=str, default="./debug_logs/lbf/") 
 
@@ -28,7 +29,7 @@ env.reset()
 
 hyperparams = {
     "n_agents": env.n_agents, 
-    "max_episodes": int(1e7), 
+    "max_episodes": args.max_episodes, 
     "max_cycles":50, 
     "logs_dir": os.path.join(args.log_dir, log_name), 
     "update_timestep": 30, 
@@ -65,6 +66,10 @@ if args.baseline == "noam":
     self_state_dim = state_dim 
 elif args.baseline == "giam": 
     self_state_dim = state_dim + other_state_dim + other_action_dim 
+elif args.baseline == "taam": 
+    self_state_dim = state_dim + other_action_dim 
+elif args.baseline == "toam": 
+    self_state_dim = state_dim + other_state_dim 
 self_action_dim = action_dim 
 self_agent = PPO(self_state_dim, self_action_dim, hyperparams) 
 
@@ -72,21 +77,22 @@ self_agent = PPO(self_state_dim, self_action_dim, hyperparams)
 agents = [self_agent, other_agent] 
 
 log_dir = Path(hyperparams["logs_dir"])
-writer = SummaryWriter(log_dir)
-# log_dir = Path(hyperparams["logs_dir"])
-# for i in count(0):
-#     temp = log_dir/('run{}'.format(i)) 
-#     if temp.exists():
-#         pass
-#     else:
-#         writer = SummaryWriter(temp)
-#         log_dir = temp
-#         break
+# writer = SummaryWriter(log_dir)
+log_dir = Path(hyperparams["logs_dir"])
+for i in count(0):
+    temp = log_dir/('run{}'.format(i)) 
+    if temp.exists():
+        pass
+    else:
+        writer = SummaryWriter(temp)
+        log_dir = temp
+        break
 
 for i_episode in range(1, hyperparams["max_episodes"]+1): 
     state = env.reset() 
 
-    prev_a_other = np.zeros(other_action_dim) 
+    if (args.baseline == "giam") or (args.baseline == "taam"): 
+        prev_a_other = np.zeros(other_action_dim) 
     other_state = state[other_agent_id] 
 
     if args.baseline == "noam": 
@@ -94,6 +100,10 @@ for i_episode in range(1, hyperparams["max_episodes"]+1):
     elif args.baseline == "giam": 
         self_state = np.append(state[self_agent_id], state[other_agent_id]) 
         self_state = np.append(self_state, prev_a_other)  
+    elif args.baseline == "taam": 
+        self_state = np.append(state[self_agent_id], prev_a_other)  
+    elif args.baseline == "toam": 
+        self_state = np.append(state[self_agent_id], state[other_agent_id]) 
 
     self_ep_reward, other_ep_reward, team_ep_reward = 0, 0, 0 
 
@@ -110,7 +120,11 @@ for i_episode in range(1, hyperparams["max_episodes"]+1):
             self_state = state[self_agent_id] 
         elif args.baseline == "giam": 
             self_state = np.append(state[self_agent_id], state[other_agent_id]) 
-            self_state = np.append(self_state, prev_a_other)  
+            self_state = np.append(self_state, prev_a_other) 
+        elif args.baseline == "taam": 
+            self_state = np.append(state[self_agent_id], prev_a_other)  
+        elif args.baseline == "toam": 
+            self_state = np.append(state[self_agent_id], state[other_agent_id]) 
 
         # saving reward and is_terminals 
         [ agents[a].buffer.rewards.append(reward[a]) for a in range(hyperparams["n_agents"]) ] 

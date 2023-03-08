@@ -1,8 +1,8 @@
-baselines="noam giam"
+baselines="noam giam toam taam"
 for baseline in $baselines
 do
     mkdir -p out/
-    run_cmd="scripts/run_baselines.sh ${baseline}"
+    run_cmd="scripts/run_lbf.sh ${baseline}"
     sbatch_cmd="sbatch ${run_cmd}"
     cmd="$sbatch_cmd"
     echo -e "${cmd}"
