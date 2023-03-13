@@ -27,7 +27,7 @@ env.reset()
 
 hyperparams = {
     "n_agents": env.n_agents, 
-    "max_episodes":30_000,
+    "max_episodes":args.max_episodes,
     "initial_start_episodes":50,
     "max_cycles":25,
     "update_timestep": 30, 
