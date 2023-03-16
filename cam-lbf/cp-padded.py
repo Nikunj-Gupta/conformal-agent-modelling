@@ -102,7 +102,7 @@ for i_episode in range(1, hyperparams["max_episodes"]+1):
         actions = tuple([ ego_agent.select_action(np.concatenate([
         state[self_agent_id], 
         state[other_agent_id], 
-        padded_S_pseudo]
+        padded_S]
             )), other_agent.select_action(state[other_agent_id]) ]) 
         state, reward, done, info = env.step(actions)
 
