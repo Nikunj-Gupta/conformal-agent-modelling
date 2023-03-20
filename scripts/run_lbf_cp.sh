@@ -16,5 +16,5 @@ cp_update_timestep=${1}
 
 runs=${SLURM_ARRAY_TASK_ID}
 
-tensorboard --logdir="./debug_logs/lbf-cp-padding" --host 0.0.0.0 --load_fast false &
-time python cam-lbf/cp-padded.py --cp_update_timestep=$cp_update_timestep --log_dir="./debug_logs/lbf-cp-padding" --seed=$runs 
+tensorboard --logdir="./debug_logs/lbf-cp-penultimate" --host 0.0.0.0 --load_fast false &
+time python cam-lbf/cp-penultimate.py --cp_update_timestep=$cp_update_timestep --log_dir="./debug_logs/lbf-cp-penultimate" --seed=$runs 
