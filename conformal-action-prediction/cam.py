@@ -88,12 +88,12 @@ class CAM:
 
         print("Dataset created!")
 
-    def train_cp_model(self, max_epochs=200, lr=0.1, momentum=0.9, weight_decay=5e-4): 
+    def train_cp_model(self, max_epochs=200, lr=0.1, momentum=0.9, weight_decay=5e-4, conformalize=True): 
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.SGD(self.model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay) 
 
         for epoch in range(max_epochs):
-            print("Training conformal model")
+            print("Training prediction model")
             print("\nEpoch: %d" % epoch)
             self.model.train(True) 
             train_loss = 0
@@ -117,7 +117,8 @@ class CAM:
         
         print("Prediction Model trained!")
         
-        self.conformalize_model() 
+        if conformalize: 
+            self.conformalize_model() 
 
         return train_loss/(batch_idx+1), 100.*correct/total 
 
@@ -162,6 +163,14 @@ class CAM:
             self.model.eval() 
             output = self.model(obs) 
         return output  
+
+    def get_exact_action_prediction(self, obs): 
+        print("Getting single action predictions") 
+        with torch.no_grad():
+            # switch to evaluate mode
+            self.model.eval() 
+            output = self.model(obs) 
+        return output.argmax().detach().cpu().numpy() 
 
     def validate_model(self): 
         print("Validating conformal action predictions") 
