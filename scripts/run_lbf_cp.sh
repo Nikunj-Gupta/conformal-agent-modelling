@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --time=40:00:00
-#SBATCH --account=def-ebrahimi
+#SBATCH --account=rrg-ebrahimi
 #SBATCH --mem=64G
 #SBATCH --output=out/%x_%A.out
 #SBATCH --error=out/%x_%A.err
@@ -16,5 +16,5 @@ cp_update_timestep=${1}
 
 runs=${SLURM_ARRAY_TASK_ID}
 
-tensorboard --logdir="./debug_logs/lbf-cp-binary" --host 0.0.0.0 --load_fast false &
-time python cam-lbf/cp-binary.py --cp_update_timestep=$cp_update_timestep --log_dir="./debug_logs/lbf-cp-binary" --seed=$runs 
+tensorboard --logdir="./debug_logs/lbf-exact-actions" --host 0.0.0.0 --load_fast false &
+time python cam-lbf/exact-actions.py --cp_update_timestep=$cp_update_timestep --log_dir="./debug_logs/lbf-exact-actions" --seed=$runs 
