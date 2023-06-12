@@ -1,11 +1,8 @@
 # conformal-agent-modelling
 
-**Paper**: CAMMARL: Conformal Action Modeling in Multi Agent Reinforcement Learning ([ArXiv]()) 
-
-**Authors**: Nikunj Gupta and Samira Ebrahimi Kahou 
-
-**Affiliations**: Mila Quebec AI Institute,  ETS Montreal, New York University, CIFAR AI Chair 
-
+**Paper**: CAMMARL: Conformal Action Modeling in Multi Agent Reinforcement Learning ([ArXiv]()) <br />
+**Authors**: Nikunj Gupta and Samira Ebrahimi Kahou <br />
+**Affiliations**: Mila Quebec AI Institute,  ETS Montreal, New York University, CIFAR AI Chair <br />
 **Correspondence**: nikunj.gupta@nyu.edu 
 
 ## Appendix   
