@@ -1,9 +1,9 @@
 # conformal-agent-modelling
 
-## Closely related works 
-1. [Few-shot Conformal Prediction with Auxiliary Tasks](https://arxiv.org/abs/2102.08898) 
-2. [Agent Modelling under Partial Observability for Deep Reinforcement Learning](https://arxiv.org/abs/2006.09447) 
-
+Paper: CAMMARL: Conformal Action Modeling in Multi Agent Reinforcement Learning ([ArXiv]())
+Authors: Nikunj Gupta and Samira Ebrahimi Kahou 
+Affiliations: Mila Quebec AI Institute,  ETS Montreal, New York University, CIFAR AI Chair 
+Correspondence: nikunj.gupta@nyu.edu 
 
 ## Appendix   
 ### Steps for Multiagent ALE Atari 
