@@ -7,3 +7,4 @@ __pycache__
 autorom/
 backup/
 .ipynb_checkpoints/
+*.ipynb 
