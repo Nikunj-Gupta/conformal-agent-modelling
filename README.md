@@ -27,7 +27,7 @@ Before taking actions in an environment with more than one intelligent agent, an
 
 ### Experiments 
 
-`cam-cn` or `cam-lbf` folders contains scripts to run all the CAMMARL versions (`cp-padded`, `cp-binary`, `cp-penultimate`). 
+`cam-cn` or `cam-lbf` folders contain scripts to run all the CAMMARL versions (`cp-padded`, `cp-binary`, `cp-penultimate`) and EAP (as discussed in paper). `baselines` folder has all the baselines/benchmark experiments as discussed in the paper (GIAM / NOAM / TAAM / TOAM). 
 
 For example, 
 
