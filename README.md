@@ -25,7 +25,7 @@ Before taking actions in an environment with more than one intelligent agent, an
 
 ```pip install -r req.txt``` 
 
-### 
+### Experiments 
 
 `cam-cn` or `cam-lbf` folders contains scripts to run all the CAMMARL versions (`cp-padded`, `cp-binary`, `cp-penultimate`). 
 
