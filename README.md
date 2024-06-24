@@ -157,7 +157,7 @@ Note: If `AutoROM --install-dir <path/to/install/roms>` does not work on compute
 ```
 @article{gupta2023cammarl,
   title={CAMMARL: Conformal Action Modeling in Multi Agent Reinforcement Learning},
-  author={Gupta, Nikunj and Kahou, Samira Ebrahimi},
+  author={Gupta, Nikunj, Nath, Somjit and Kahou, Samira Ebrahimi},
   journal={arXiv preprint arXiv:2306.11128},
   year={2023}
 }
