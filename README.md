@@ -151,3 +151,14 @@ Note: If `AutoROM --install-dir <path/to/install/roms>` does not work on compute
 - [Level-Based Foraging](https://github.com/semitable/lb-foraging)
 - [PettingZoo's implementation of OpenAI MPE environments](https://pettingzoo.farama.org/environments/mpe/simple_spread/) 
 - [PPO-Pytorch](https://github.com/nikhilbarhate99/PPO-PyTorch) 
+
+
+## Cite 
+```
+@article{gupta2023cammarl,
+  title={CAMMARL: Conformal Action Modeling in Multi Agent Reinforcement Learning},
+  author={Gupta, Nikunj and Kahou, Samira Ebrahimi},
+  journal={arXiv preprint arXiv:2306.11128},
+  year={2023}
+}
+```
